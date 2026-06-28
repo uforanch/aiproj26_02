@@ -148,10 +148,13 @@ def run_adam(d, h_init, G, G_agg, batch_size, edge_set, total_iter=60, randomnes
                         h.grad += noise
             optimizer.step()
     print(f"k: {get_k(d,h)} d: {d} count: {count(d,h,edge_set)}")
-    return h1
+    return h
 
 g_outer = lambda x: torch.sigmoid(x) + .1 * torch.exp(-(x - 1) ** 2)
 g_inner = lambda x: torch.sum(torch.sigmoid(-1000 * x))
+
+relu_g = lambda x: torch.sum(-1*x-1)-.5 # and (0-1 logic, removed a relu.... shot in the dark)
+relu_g_agg = lambda x: torch.relu(torch.sum(x)-.5)
     # now get final count
 g_dict = {"G_test": (lambda col : g_outer(g_inner(col)), lambda agg:-1*torch.sum(agg) ),
           #"G_original":lambda col: torch.sum(torch.sum(torch.log(1+torch.relu( -1*col)))),
@@ -160,6 +163,8 @@ g_dict = {"G_test": (lambda col : g_outer(g_inner(col)), lambda agg:-1*torch.sum
           "G_relu_prod": (lambda col: 1-torch.prod(torch.relu(col)), lambda agg:-1*torch.sum(agg)),
           "G_relu_prod_1000": (lambda col: 1-torch.prod(torch.relu(1000*col)), lambda agg:-1*torch.sum(agg) ),
           "G_sigmoid_gates": (lambda col: torch.sigmoid(torch.sum(-20*col)+10), lambda agg: torch.sigmoid(torch.sum(20*agg)-10) )}
+
+r_dict = {"R_test": (relu_g, relu_g_agg),}
 
 def basic_gdict_runner(k,d, g_dict, randomness=False, matrix_save_folder=None, csv_file=None, save_id=None):
     saved_files = []
@@ -184,10 +189,10 @@ def basic_gdict_runner(k,d, g_dict, randomness=False, matrix_save_folder=None, c
         pd.DataFrame(out_list).to_csv(csv_file)
         saved_files.append(csv_file)
     return saved_files
-
-basic_gdict_runner(5,6,g_dict,randomness=False)
+r_dict.update(g_dict)
+basic_gdict_runner(3,3,r_dict,randomness=False)
 print("-----------------------")
-basic_gdict_runner(5,6,g_dict,randomness=True)
+basic_gdict_runner(3,3,r_dict,randomness=True)
 
 
 
